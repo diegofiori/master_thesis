@@ -3,6 +3,7 @@
 
 # Ignore notebook checkpoints
 .ipynb_checkpoints/
+.idea/
 
 # Ignore all text files
 *.txt
