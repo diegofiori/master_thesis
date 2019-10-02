@@ -1,0 +1,2 @@
+class TimeIDError(Exception):
+    pass

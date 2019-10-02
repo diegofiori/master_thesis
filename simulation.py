@@ -76,3 +76,6 @@ class Simulation:
 
         slices = [[get_slice(angle, time_id) for angle in toroidal_angles] for time_id in time_ids]
         return slices
+
+    def time_ids(self):
+        return [key for key in self.data['temperature'].keys() if key[0].isdigit()]

@@ -4,6 +4,7 @@
 # Ignore notebook checkpoints
 .ipynb_checkpoints/
 .idea/
+__pycache__/
 
 # Ignore all text files
 *.txt
