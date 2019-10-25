@@ -226,7 +226,7 @@ class Simulation:
 
         return pd.Series(data=[compute_mean(self.data[q][time_id]) for time_id in time_ids], index=pd.Index(time_ids))
 
-    def get_phase_space(self, time_id, coords=None):
+    def get_phase_space(self, time_id, angle=None, coords=None):
         """ The method gives the discretized phase space of the fluid (plasma) in the simulation. It is possible both
         impose the coordinates axis to use or use all the information available. Since we only have the information
         at the grid points we call phase space the space having the physical quantities as axis. Each point corresponds
@@ -238,6 +238,12 @@ class Simulation:
         z = self.data[coords[0]]['coord3'].reshape((-1, 1, 1))
         x = self.data[coords[0]]['coord1'].reshape((1, -1, 1))
         y = self.data[coords[0]]['coord2'].reshape((1, 1, -1))
+
+        bool_vec = np.array([True] * len(z))
+        if angle is not None:
+            bool_vec = z[:, 0, 0] <= angle
+            n_z = np.sum(bool_vec)
+            z = z[bool_vec]  # we take only a portion of the toroidal angle
 
         def flatten_grid(array, axis_rep):
 
@@ -252,7 +258,7 @@ class Simulation:
         x_flat = np.expand_dims(flatten_grid(x, (n_z, 1, n_y)), axis=1)
         list_of_vertical_features = [z_flat, x_flat, y_flat]
         for coord in coords:
-            list_of_vertical_features.append(np.expand_dims(self.data[coord][time_id].flatten(), axis=1))
+            list_of_vertical_features.append(np.expand_dims(self.data[coord][time_id][bool_vec].flatten(), axis=1))
 
         features = np.concatenate(list_of_vertical_features, axis=1)
 
