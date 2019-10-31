@@ -1,7 +1,8 @@
 import giotto as o
 from giotto.homology import VietorisRipsPersistence, CubicalPersistence
 from giotto.images import DilationFiltration
-from giotto.diagrams import PairwiseDistance
+from giotto.pipeline import Pipeline
+from giotto.diagrams import PairwiseDistance, Amplitude
 from simulation import Simulation
 from exceptions import TimeIDError
 
@@ -35,6 +36,7 @@ class VlasovGiotto:
         self._vr_homology = VietorisRipsPersistence()
         self._results = pd.DataFrame()
         self._memory = {}
+        self._past_diagram = None
         self._do_sc = do_spectral_clustering
 
     def show(self):
@@ -72,6 +74,7 @@ class VlasovGiotto:
         -------
         a pd.DataFrame containing as indexes the times_id and as columns the topological features
         """
+        self._past_diagram = None
         for name in tqdm(self._files):
             simulation = Simulation(self._simulation_path+name)
             # work on the time_ids
@@ -132,6 +135,8 @@ class VlasovGiotto:
             df_values = [self._extract_features_from_slices_diagrams(diagrams, angles) for diagrams in tid_diag]
             df = pd.concat(df_values, axis=1).transpose()
             df.index = pd.Index(simulation.time_ids())
+            df = pd.concat([df, self._compute_diagram_z_derivatives(simulation, top_q, 0),
+                            self._compute_diagram_z_derivatives(simulation, top_q, np.pi)], axis=1)
         else:
             TypeError(f'The type {top_q} is not supported')
         return df
@@ -142,11 +147,46 @@ class VlasovGiotto:
         """
         time_ids = simulation.time_ids()
         phase_spaces_top = np.concatenate([np.expand_dims(
-            self._sample_data(simulation.get_phase_space(time_id, angle=np.pi/4),reduction), axis=0)
+            self._sample_data(simulation.get_phase_space(time_id, tor_angle=np.pi / 4), reduction), axis=0)
                                            for time_id in time_ids], axis=0)
         diagrams = self._compute_phase_spaces_diagrams(phase_spaces_top)
         df = self._extract_features_from_phase_space_diagrams(diagrams, time_ids)
+
         return df
+
+    @staticmethod
+    def _compute_diagram_z_derivatives(simulation, top_q, angle):
+
+        z = simulation.data[top_q]['coord3']
+        ind = np.argmin(np.abs(z-angle))
+        if ind == 0:
+            angles = [z[-1], z[1]]
+        elif ind == len(z)-1:
+            angles = [z[ind-1], z[0]]
+        else:
+            angles = [z[ind-1], z[ind+1]]
+        d_angle = np.abs(angles[1] - angles[0])
+        time_ids = simulation.time_ids()
+        data = simulation.extract_slices(angles, top_q)
+        metrics = ['bottleneck', 'wasserstein', 'landscape', 'betti', 'heat']
+        data_metrics = []
+        for metric in metrics:
+            pipeline = Pipeline([('cubical_persistence', CubicalPersistence()),
+                                 ('compute_amplitude', PairwiseDistance(metric))])
+            data_metrics.append([pipeline.fit_transform(np.array(data_tid))[0, 1]/d_angle for data_tid in data])
+        index = [f'der_{angle}_'+metric for metric in metrics]
+        df = pd.DataFrame(data=np.array(data_metrics), index=pd.Index(index), columns=pd.Index(time_ids)).transpose()
+        return df
+
+    def _compute_diagram_time_derivatives(self, simulation, top_q, angle):
+
+        time_ids = simulation.time_ids()
+        time_slices = [simulation.extract_slices([angle], top_q)[0]]
+        times = simulation.data['time']
+        if self._past_diagram is None:
+            if times[0] > 0:
+                pass
+        pass
 
     def _extract_features_from_phase_space_diagrams(self, diagrams, time_ids):
 
