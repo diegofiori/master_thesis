@@ -1,12 +1,14 @@
 import giotto as o
 from giotto.pipeline import Pipeline
-from giotto.diagrams import Amplitude, Scaler
+from giotto.diagrams import Amplitude, Scaler, PersistenceEntropy
 from giotto.homology import VietorisRipsPersistence, CubicalPersistence
 import numpy as np
+import pandas as pd
 
 from input_reader import ImageReader, PhaseSpaceReader
 from resampler import Grouper, ShiftResampler, Resampler
 from utils import read_pickle, write_pickle
+from simulation import Simulation
 from joblib.parallel import Parallel, delayed
 from diagram_derivatives import MultiDiagramsDerivative, DiagramDerivative
 import os
@@ -34,6 +36,9 @@ def process_result_image(result_name_pres, result_name_fut):
                                             ('compute_amplitude', Amplitude(metric=metric)),
                                             ('group_spatial', Grouper(period=image_reader.structure_['dim_z']))])
                                   for metric in METRICS]
+    list_of_pipeline_amplitude += [Pipeline([('compute_entropy', PersistenceEntropy()),
+                                             ('group_spatial', Grouper(period=image_reader.structure_['dim_z']))])]
+
     list_of_space_der_pipeline = [Pipeline([('group_diagrams', Grouper(period=image_reader.structure_['dim_z'])),
                                             ('diagram_space_der', MultiDiagramsDerivative(metric=metric,
                                                                                           periodic=True))])
@@ -78,6 +83,7 @@ def process_result_phase_space(result_name_pres, result_name_fut):
     amplitude_pipelines = [Pipeline([('scale_diagrams', Scaler(metric=metric)),
                                      ('compute_amplitude', Amplitude(metric=metric))])
                            for metric in METRICS]
+    amplitude_pipelines += [Pipeline([('compute_entropy', PersistenceEntropy())])]
     derivative_pipelines = [DiagramDerivative(metric=metric) for metric in METRICS]
     if t_fut > 0:
         amplitudes = [pipeline.fit_transform_resample(diagrams[:-t_fut], fake_y[:-t_fut])[0]
@@ -92,6 +98,14 @@ def process_result_phase_space(result_name_pres, result_name_fut):
     features = amplitudes + derivatives
 
     return np.concatenate(features, axis=1)
+
+
+def process_result_physical_quantities(result_name):
+    important_quantities = ['theta', 'temperature', 'temperaturi', 'strmf', 'vpari']
+    simulation = Simulation(SIMULATION_PATH+result_name)
+    energy = simulation.get_energy()
+    important_average_quantities = [simulation.get_average_quantity(q) for q in important_quantities]
+    return pd.concat([energy]+important_average_quantities, axis=1)
 
 
 if __name__ == "__main__":
@@ -109,11 +123,19 @@ if __name__ == "__main__":
         write_pickle(path=SAVE_PATH + 'slices_top_features.pickle', array=images_topology)
 
     print('phase space')
-    phase_space_top = Parallel(n_jobs=-1)(delayed(process_result_phase_space)(dir_path[t], dir_path[t+1])
+    if not os.path.isfile(SAVE_PATH+'phase_space_top_features.pickle'):
+        phase_space_top = Parallel(n_jobs=-1)(delayed(process_result_phase_space)(dir_path[t], dir_path[t+1])
+                                              for t in range(len(dir_path) - 1))
+
+        phase_space_top = np.concatenate(phase_space_top)
+
+        write_pickle(path=SAVE_PATH+'phase_space_top_features.pickle', array=phase_space_top)
+
+    print('extract physics')
+    if not os.path.isfile(SAVE_PATH+'physical_features.pickle'):
+        physical_qs = Parallel(n_jobs=-1)(delayed(process_result_physical_quantities)(dir_path[t])
                                           for t in range(len(dir_path) - 1))
-
-    phase_space_top = np.concatenate(phase_space_top)
-
-    write_pickle(path=SAVE_PATH+'phase_space_top_features.pickle', array=phase_space_top)
+        physical_qs = pd.concat(physical_qs)
+        physical_qs.to_pickle(SAVE_PATH+'physical_features.pickle')
 
 
