@@ -28,11 +28,12 @@ class PhaseSpaceReader(object):
                            ] if physical_q is None else physical_q
         self.structure_ = None
 
-    def read(self, filename):
+    def read(self, filename, *args, **kwargs):
         simulation = Simulation(filename)
         time_ids = simulation.time_ids()
 
-        phase_spaces = [np.expand_dims(simulation.get_phase_space(time_id), axis=0) for time_id in time_ids]
+        phase_spaces = [np.expand_dims(simulation.get_phase_space(time_id, *args, **kwargs), axis=0)
+                        for time_id in time_ids]
         phase_spaces = np.concatenate(phase_spaces)
 
         self.structure_ = {'nb_time_steps': len(time_ids), 'inner_sequence': ['nb_time_steps']}

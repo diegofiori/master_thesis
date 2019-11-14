@@ -264,10 +264,10 @@ class Simulation:
         features = np.concatenate(list_of_vertical_features, axis=1)
 
         if remove_core:
-            xy_bool_vec = (features[:, 1] > x.mean() + 0.05*(x.max()-x.min())
-                           or features[:, 1] < x.mean() - 0.05*(x.max()-x.min())
-                           or features[:, 2] > y.mean() + 0.05*(y.max()-y.min())
-                           or features[:, 2] < y.mean() - 0.05*(y.max()-y.min()))
+            xy_bool_vec = ((features[:, 1] > x.mean() + 0.05*(x.max()-x.min()))
+                           | (features[:, 1] < x.mean() - 0.05*(x.max()-x.min()))
+                           | (features[:, 2] > y.mean() + 0.05*(y.max()-y.min()))
+                           | (features[:, 2] < y.mean() - 0.05*(y.max()-y.min())))
             features = features[xy_bool_vec]
 
         return features

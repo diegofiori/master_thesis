@@ -2,25 +2,54 @@ import numpy as np
 from giotto.diagrams import Amplitude, PairwiseDistance
 from giotto.homology import CubicalPersistence
 from giotto.homology import VietorisRipsPersistence
+from giotto.diagrams._metrics import *
 from giotto.utils.validation import check_diagram, validate_params, validate_metric_params
 from giotto.base import TransformerResamplerMixin
-from giotto.diagrams._utils import _discretize
+from giotto.diagrams._utils import _discretize, _subdiagrams
+from joblib.parallel import Parallel, delayed
 
 from sklearn.base import BaseEstimator
 
-from joblib import Parallel, delayed, effective_n_jobs
+from joblib import Parallel, delayed
+from sklearn.utils.validation import check_is_fitted
+
+
+def _parallel_successive_pairwise(X, metric, metric_params,
+                                  homology_dimensions, periodic, n_jobs):
+    metric_func = implemented_metric_recipes[metric]
+    effective_metric_params = metric_params.copy()
+    none_dict = {dim: None for dim in homology_dimensions}
+    samplings = effective_metric_params.pop('samplings', none_dict)
+    step_sizes = effective_metric_params.pop('step_sizes', none_dict)
+    if periodic:
+        X = np.concatenate([X, np.expand_dims(X[0], axis=0)])
+
+    distance_matrices = Parallel(n_jobs=n_jobs)(delayed(metric_func)(
+        _subdiagrams(X[t-1].reshape(1, X.shape[1], 3), [dim], remove_dim=True),
+        _subdiagrams(X[t].reshape(1, X.shape[1], 3), [dim], remove_dim=True),
+        sampling=samplings[dim], step_size=step_sizes[dim],
+        **effective_metric_params) for dim in homology_dimensions
+        for t in range(1, len(X)))
+
+    distance_matrices = np.concatenate(distance_matrices, axis=1)
+
+    ind_temp = X.shape[0] - 1
+    distance_matrices = np.stack(
+        [distance_matrices[:, i*ind_temp: (i+1)*ind_temp]
+         for i in range(len(homology_dimensions))], axis=2)
+    return distance_matrices
 
 
 class DiagramDerivative(BaseEstimator, TransformerResamplerMixin):
 
     _hyperparameters = {'order': [float, (1, np.inf)]}
 
-    def __init__(self, metric='landscape', metric_params=None, order=2., h=None,
+    def __init__(self, metric='landscape', metric_params=None, order=2., periodic=False,
                  n_jobs=None):
         self.metric = metric
         self.metric_params = metric_params
         self.order = order
-        self.h = h
+        self.periodic = periodic
         self.n_jobs = n_jobs
 
     def fit(self, X, y=None):
@@ -77,23 +106,44 @@ class DiagramDerivative(BaseEstimator, TransformerResamplerMixin):
         diagrams should be given for fixed toroidal-coordinate and different times. If not passed in the constructor the
         delta_t is considered equal to 1.
         """
-        n_jobs = self.n_jobs if self.n_jobs is not None else 1
-        h = self.h if self.h is not None else 1
 
-        def my_pairwise_distance(x, y):
-            dist = PairwiseDistance(metric=self.metric, metric_params=self.metric_params,
-                                    order=self.order, n_jobs=1).fit_transform(np.concatenate([np.expand_dims(x, axis=0),
-                                                                                              np.expand_dims(y, axis=0)]
-                                                                                             ))
-            return dist[0, 1]
+        Xt = _parallel_successive_pairwise(X, self.metric,
+                                self.effective_metric_params_,
+                                self.homology_dimensions_,
+                                self.periodic,
+                                self.n_jobs)
 
-        metric_function = my_pairwise_distance
-        derivatives = Parallel(n_jobs=n_jobs)(delayed(metric_function)(
-            X[t], X[t+1]) for t in range(len(X)-1))
-        return np.array(derivatives)/h
+        if self.order is not None:
+            Xt = np.linalg.norm(Xt, axis=2, ord=self.order)
+
+        return Xt.reshape((-1, 1))
+
+    def resample(self, y, X=None):
+        return y[1:]
 
 
+class MultiDiagramsDerivative(BaseEstimator, TransformerResamplerMixin):
+    def __init__(self, *args, n_jobs=1, **kwargs):
+        self.n_jobs = n_jobs
+        self.diagram_derivative = DiagramDerivative(*args, **kwargs)
 
+    def fit(self, X, y):
+        self.diagram_derivative.fit(X[0], y)
+        self._is_fitted = True
+        return self
+
+    def transform(self, X, y=None):
+        """ X must be an array of groups diagrams or list of groups of diagrams."""
+
+        check_is_fitted(self, ['_is_fitted'])
+        X_t = Parallel(n_jobs=self.n_jobs)(delayed(self.diagram_derivative.transform)(X[i]) for i in range(len(X)))
+        X_t = np.concatenate([np.expand_dims(x, axis=0) for x in X_t])
+
+        return X_t
+
+    def resample(self, y, X=None):
+        check_is_fitted(self, ['_is_fitted'])
+        return y
 
 
 
