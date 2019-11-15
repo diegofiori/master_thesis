@@ -3,13 +3,28 @@ from simulation import Simulation
 
 
 class ImageReader(object):
+    """ The slice extractor from the simulation. It extract all the possible slices for all the physical quantities and
+    concatenate them along axis 0. The previous structure is stored in the structure_ attribute.
+
+    Parameters
+    ----------
+    physical_q: list or None, (default None)
+        the physical quantities to extract from the simulation file. If None all the possible data are extracted.
+
+    Example
+    -------
+    >>> path = 'path_to_simulation'
+    >>> image_reader = ImageReader()
+    >>> images = image_reader.read(path)
+    >>> print(image_reader.structure_)
+    """
     def __init__(self, physical_q=None):
         self.physical_q = ['theta', 'temperature', 'temperaturi', 'strmf', 'vpari', 'psi'
                            ] if physical_q is None else physical_q
         self.structure_ = None
 
     def read(self, filename):
-
+        """ """
         simulation = Simulation(filename)
         time_ids = simulation.time_ids()
 

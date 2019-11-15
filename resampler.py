@@ -9,7 +9,9 @@ import numpy as np
 
 
 class ShiftResampler(BaseEstimator, TransformerResamplerMixin):
-    """Data sampling transformer that returns a sampled numpy.ndarray.
+    """Data sampling transformer that returns a shifted and sampled numpy.ndarray. It means that from a 1d array
+    for instance the class produce as output a matrix where each raw is a sample from the original array. Each raw is
+    shifted from the previous one of 1. Clearly the number of raw will be equal to the period.
 
     Parameters
     ----------
@@ -29,11 +31,14 @@ class ShiftResampler(BaseEstimator, TransformerResamplerMixin):
     >>> plt.show()
     >>> # Set up the Resampler
     >>> period = 10
-    >>> periodic_sampler = Resampler(period=period)
+    >>> periodic_sampler = ShiftResampler(period=period)
     >>> # Fit and transform the DataFrame
     >>> periodic_sampler.fit(signal)
     >>> signal_resampled = periodic_sampler.transform(signal)
-    >>> plt.plot(signal_resampled)
+    >>> print(f'the signal sampled from index 0 with period {period}')
+    >>> plt.plot(signal_resampled[0])
+    >>> print(f'the signal sampled from index 5 with period {period}')
+    >>> plt.plot(signal_resampled[5])
 
     """
     _hyperparameters = {'period': [int, (1, np.inf)]}
@@ -71,7 +76,7 @@ class ShiftResampler(BaseEstimator, TransformerResamplerMixin):
 
         Parameters
         ----------
-        X : ndarray, shape (n_samples, n_features)
+        X : array-like
             Input data. ``
 
         y : None
@@ -80,9 +85,8 @@ class ShiftResampler(BaseEstimator, TransformerResamplerMixin):
 
         Returns
         -------
-        Xt : ndarray, shape (n_samples_new, n_features)
-            The transformed/resampled input array. ``n_samples_new =
-            n_samples // period``.
+        Xt : array-like,
+            The transformed/resampled input array. ``new_shape = (period, n_samples // period,  *X.shape[1:])``.
 
         """
         # Check if fit had been called
@@ -97,7 +101,7 @@ class ShiftResampler(BaseEstimator, TransformerResamplerMixin):
 
         Parameters
         ----------
-        y : ndarray, shape (n_samples, n_features)
+        y : ndarray, shape (n_samples, )
             Target.
 
         X : None
@@ -107,7 +111,7 @@ class ShiftResampler(BaseEstimator, TransformerResamplerMixin):
         Returns
         -------
         yt : ndarray, shape (n_samples_new, 1)
-            The resampled target. ``n_samples_new = n_samples // period``.
+            The resampled target. ``new_shape = (period, n_samples // period)``.
 
         """
         # Check if fit had been called
@@ -118,13 +122,45 @@ class ShiftResampler(BaseEstimator, TransformerResamplerMixin):
 
 
 class Grouper(BaseEstimator, TransformerResamplerMixin):
+    """ Data grouping transformer. It groups tha data in batch of length period.
 
+    Parameters
+    ----------
+    period: int, (default 2)
+
+    Examples
+    --------
+    >>> import numpy as np
+    >>> vector = np.arange(10)
+    >>> grouper = Grouper(period=5)
+    >>> fake_y = np.zeros(len(vector))
+    >>> vector_grouped = grouper.fit_transform_resample(vector, fake_y)[0]
+    >>> vector_grouped
+    """
     _hyperparameters = {'period': [int, (1, np.inf)]}
 
     def __init__(self, period=2):
         self.period = period
 
     def fit(self, X, y=None):
+        """Do nothing and return the estimator unchanged.
+
+        This method is there to implement the usual scikit-learn API and hence
+        work in pipelines.
+
+        Parameters
+        ----------
+        X : ndarray
+            Input data.
+
+        y : None
+            Ignored.
+
+        Returns
+        -------
+        self : object
+
+        """
         validate_params(self.get_params(), self._hyperparameters)
         # check_array(X, ensure_2d=False)
 
@@ -132,6 +168,24 @@ class Grouper(BaseEstimator, TransformerResamplerMixin):
         return self
 
     def transform(self, X, y=None):
+        """Transform/group X.
+        Note that the method gives an error if n_samples // period != 0
+
+        Parameters
+        ----------
+        X : array-like
+            Input data. ``
+
+        y : None
+            There is no need of a target, yet the pipeline API
+            requires this parameter.
+
+        Returns
+        -------
+        Xt : array-like,
+            The transformed/grouped input array. ``new_shape = (n_samples / period, period, *X.shape[1:])``.
+
+        """
         check_is_fitted(self, ['_is_fitted'])
         # Xt = check_array(X, ensure_2d=False)
         Xt = X
@@ -139,6 +193,23 @@ class Grouper(BaseEstimator, TransformerResamplerMixin):
         return np.concatenate([np.expand_dims(Xt[i:i+self.period], axis=0) for i in range(0, Xt.shape[0], self.period)])
 
     def resample(self, y, X=None):
+        """Resample y.
+
+        Parameters
+        ----------
+        y : ndarray, shape (n_samples, )
+            Target.
+
+        X : None
+            There is no need of input data,
+            yet the pipeline API requires this parameter.
+
+        Returns
+        -------
+        yt : ndarray, shape (n_samples_new, 1)
+            The resampled target. ``new_shape = (n_samples / period, period)``.
+
+        """
         check_is_fitted(self, ['_is_fitted'])
         print(y.shape)
         y = column_or_1d(y)
@@ -162,8 +233,8 @@ class Resampler(BaseEstimator, TransformerResamplerMixin):
     >>> from giotto.time_series import Resampler
     >>> # Create a noisy signal sampled
     >>> signal = np.asarray([np.sin(x /40) + np.random.random()
-    ... for x in range(0, 300)])
-    >>> plt.plot(signal)
+    ... for x in range(0, 300)]).reshape((1, -1))
+    >>> plt.plot(signal.reshape((-1, )))
     >>> plt.show()
     >>> # Set up the Resampler
     >>> period = 10
@@ -171,7 +242,7 @@ class Resampler(BaseEstimator, TransformerResamplerMixin):
     >>> # Fit and transform the DataFrame
     >>> periodic_sampler.fit(signal)
     >>> signal_resampled = periodic_sampler.transform(signal)
-    >>> plt.plot(signal_resampled)
+    >>> plt.plot(signal_resampled.reshape((-1, )))
 
     """
     _hyperparameters = {'period': [int, (1, np.inf)]}
@@ -187,8 +258,8 @@ class Resampler(BaseEstimator, TransformerResamplerMixin):
 
         Parameters
         ----------
-        X : ndarray, shape (n_samples, n_features)
-            Input data.
+        X : ndarray, shape (n_group, n_samples, n_features)
+            Input data. It can be generalized at further dimensions.
 
         y : None
             Ignored.
@@ -209,7 +280,7 @@ class Resampler(BaseEstimator, TransformerResamplerMixin):
 
         Parameters
         ----------
-        X : ndarray, shape (n_samples, n_features)
+        X : ndarray, shape (n_group, n_samples, n_features)
             Input data. ``
 
         y : None
@@ -218,7 +289,7 @@ class Resampler(BaseEstimator, TransformerResamplerMixin):
 
         Returns
         -------
-        Xt : ndarray, shape (n_samples_new, n_features)
+        Xt : ndarray, shape (n_group, n_samples_new, n_features)
             The transformed/resampled input array. ``n_samples_new =
             n_samples // period``.
 
@@ -235,7 +306,7 @@ class Resampler(BaseEstimator, TransformerResamplerMixin):
 
         Parameters
         ----------
-        y : ndarray, shape (n_samples, n_features)
+        y : ndarray, shape (n_group, n_samples)
             Target.
 
         X : None
@@ -244,7 +315,7 @@ class Resampler(BaseEstimator, TransformerResamplerMixin):
 
         Returns
         -------
-        yt : ndarray, shape (n_samples_new, 1)
+        yt : ndarray, shape (n_group, n_samples_new, 1)
             The resampled target. ``n_samples_new = n_samples // period``.
 
         """

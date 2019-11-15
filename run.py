@@ -16,8 +16,9 @@ import os
 
 SIMULATION_PATH = '/Users/diegofiori/Desktop/epfl/master_thesis/Reverse/'
 SAVE_PATH = '/Users/diegofiori/Desktop/epfl/master_thesis/results/'
-# METRICS = ['bottleneck', 'wasserstein', 'landscape', 'betti', 'heat']
-METRICS = ['landscape']
+AMPLITUDE_METRICS = ['bottleneck', 'wasserstein']
+DERIVATIVE_METRICS = ['bottleneck', 'wasserstein', 'betti', 'landscape', 'heat']
+
 
 
 def process_result_image(result_name_pres, result_name_fut):
@@ -35,17 +36,17 @@ def process_result_image(result_name_pres, result_name_fut):
     list_of_pipeline_amplitude = [Pipeline([('rescale_diagrams', Scaler(metric=metric)),
                                             ('compute_amplitude', Amplitude(metric=metric)),
                                             ('group_spatial', Grouper(period=image_reader.structure_['dim_z']))])
-                                  for metric in METRICS]
+                                  for metric in AMPLITUDE_METRICS]
     list_of_pipeline_amplitude += [Pipeline([('compute_entropy', PersistenceEntropy()),
                                              ('group_spatial', Grouper(period=image_reader.structure_['dim_z']))])]
 
     list_of_space_der_pipeline = [Pipeline([('group_diagrams', Grouper(period=image_reader.structure_['dim_z'])),
                                             ('diagram_space_der', MultiDiagramsDerivative(metric=metric,
                                                                                           periodic=True))])
-                                  for metric in METRICS]
+                                  for metric in DERIVATIVE_METRICS]
     list_of_time_der_pipeline = [Pipeline([('shift_resample', ShiftResampler(period=image_reader.structure_['dim_z'])),
                                            ('diagram_time_der', MultiDiagramsDerivative(metric=metric))])
-                                 for metric in METRICS]
+                                 for metric in DERIVATIVE_METRICS]
     if z_fut > 0:
         amplitudes = [pipeline.fit_transform_resample(diagrams[:-z_fut], fake_y[:-z_fut])[0]
                       for pipeline in list_of_pipeline_amplitude]
@@ -82,9 +83,9 @@ def process_result_phase_space(result_name_pres, result_name_fut):
     fake_y = np.zeros(len(diagrams))
     amplitude_pipelines = [Pipeline([('scale_diagrams', Scaler(metric=metric)),
                                      ('compute_amplitude', Amplitude(metric=metric))])
-                           for metric in METRICS]
+                           for metric in AMPLITUDE_METRICS]
     amplitude_pipelines += [Pipeline([('compute_entropy', PersistenceEntropy())])]
-    derivative_pipelines = [DiagramDerivative(metric=metric) for metric in METRICS]
+    derivative_pipelines = [DiagramDerivative(metric=metric) for metric in DERIVATIVE_METRICS]
     if t_fut > 0:
         amplitudes = [pipeline.fit_transform_resample(diagrams[:-t_fut], fake_y[:-t_fut])[0]
                       for pipeline in amplitude_pipelines]
