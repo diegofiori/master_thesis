@@ -12,8 +12,8 @@ class Simulation:
     """
     def __init__(self, path, dim=3):
         with h5py.File(path, 'r') as f:
-            reference_num = int(''.join(
-                list(filter(str.isdigit, path.split('/')[-1].split('.')[-2]))))  # extract the number from the name
+            reference_num = ''.join(
+                list(filter(str.isdigit, path.split('/')[-1].split('.')[-2])))  # extract the number from the name
             self._setup_file = f['files'][f'STDIN.{reference_num}'][()][0].decode('ascii')
             self._data = self._extract_data(f['data'], dim=dim)
             self._input = self._recursive_data_mod(f['data'][f'input.{reference_num}'])

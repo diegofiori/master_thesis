@@ -12,29 +12,22 @@ from simulation import Simulation
 from joblib.parallel import Parallel, delayed
 from diagram_derivatives import MultiDiagramsDerivative, DiagramDerivative
 import os
+import time
 
 
 SIMULATION_PATH = '/Users/diegofiori/Desktop/epfl/master_thesis/Reverse/'
 SAVE_PATH = '/Users/diegofiori/Desktop/epfl/master_thesis/results/'
 AMPLITUDE_METRICS = ['bottleneck', 'wasserstein']
 DERIVATIVE_METRICS = ['bottleneck', 'wasserstein', 'betti', 'landscape', 'heat']
+ORDER = None
 
 
-
-def process_result_image(result_name_pres, result_name_fut):
-    image_reader = ImageReader()
-    images_pres = image_reader.read(SIMULATION_PATH+result_name_pres)
-    images = images_pres
-    z_fut = 0
-    if result_name_fut is not None:
-        images_fut = image_reader.read(SIMULATION_PATH+result_name_fut)
-        images = np.concatenate([images_pres, images_fut[:image_reader.structure_['dim_z']]])
-        z_fut = image_reader.structure_['dim_z']
+def from_images_to_topology(images, z_fut, image_reader):
     diagrams = CubicalPersistence().fit_transform(images)
 
     fake_y = np.zeros(len(diagrams))
     list_of_pipeline_amplitude = [Pipeline([('rescale_diagrams', Scaler(metric=metric)),
-                                            ('compute_amplitude', Amplitude(metric=metric)),
+                                            ('compute_amplitude', Amplitude(metric=metric, order=ORDER)),
                                             ('group_spatial', Grouper(period=image_reader.structure_['dim_z']))])
                                   for metric in AMPLITUDE_METRICS]
     list_of_pipeline_amplitude += [Pipeline([('compute_entropy', PersistenceEntropy()),
@@ -59,12 +52,44 @@ def process_result_image(result_name_pres, result_name_fut):
                              for pipeline in list_of_space_der_pipeline]
     time_derivatives = [np.transpose(pipeline.fit_transform_resample(diagrams, fake_y)[0], axes=(1, 0, 2))
                         for pipeline in list_of_time_der_pipeline]
-    if result_name_fut is None:
+    if z_fut == 0:
         time_derivatives = [np.concatenate([array, np.zeros((1, *array.shape[1:]))]) for array in time_derivatives]
 
     features = amplitudes + space_derivatives + time_derivatives
     features = np.concatenate(features, axis=2)
     return features
+
+
+def read_and_group(path_image, image_reader):
+    image = image_reader.read(path_image)
+    structure = image_reader.structure_
+    grouper = Grouper(period=structure['dim_z']*structure['nb_time_steps'])
+    image = grouper.fit_transform(image)
+    return image
+
+
+def process_result_image(result_file_names, n_jobs):
+    image_reader = ImageReader()
+    print(result_file_names)
+    images = [read_and_group(SIMULATION_PATH+result_name, image_reader)
+              for result_name in result_file_names if result_name is not None]
+    z_fut = image_reader.structure_['dim_z']
+    if result_file_names[-1] is None:
+        z_fut = 0
+    else:
+        # images = np.concatenate(images, axis=1)
+        for i, image in enumerate(images):
+            if i == len(images) - 1:
+                break
+            images[i] = np.concatenate([image, images[i+1][:, :z_fut]], axis=1)
+        images.pop(-1)
+
+    topological_features = Parallel(n_jobs=n_jobs)(delayed(from_images_to_topology)(images[i][j], z_fut, image_reader)
+                                                   for i in range(len(images)) for j in range(len(images[i])))
+    topological_features = [np.expand_dims(vec, axis=0) for vec in topological_features]
+    topological_features = [np.concatenate(topological_features[i:i+len(images[0])], axis=0)
+                            for i in range(0, len(topological_features), len(images[0]))]
+    return np.concatenate(topological_features, axis=1)
 
 
 def process_result_phase_space(result_name_pres, result_name_fut):
@@ -82,7 +107,7 @@ def process_result_phase_space(result_name_pres, result_name_fut):
     diagrams = diagrams_pipeline.fit_transform_resample(phase_spaces, y_fake)[0]
     fake_y = np.zeros(len(diagrams))
     amplitude_pipelines = [Pipeline([('scale_diagrams', Scaler(metric=metric)),
-                                     ('compute_amplitude', Amplitude(metric=metric))])
+                                     ('compute_amplitude', Amplitude(metric=metric, order=ORDER))])
                            for metric in AMPLITUDE_METRICS]
     amplitude_pipelines += [Pipeline([('compute_entropy', PersistenceEntropy())])]
     derivative_pipelines = [DiagramDerivative(metric=metric) for metric in DERIVATIVE_METRICS]
@@ -110,17 +135,26 @@ def process_result_physical_quantities(result_name):
 
 
 if __name__ == "__main__":
+    t_in = time.time()
+    n_jump = 1
     dir_path = os.listdir(SIMULATION_PATH)
     dir_path = [path for path in dir_path if ('result' in path)]
     dir_path = sorted(dir_path, key=lambda x: int(x.split('.')[0].split('_')[-1]))
     dir_path.append(None)
-    dir_path = dir_path[-3:]
+    # dir_path = dir_path[-3:]
     print(dir_path)
     if not os.path.isfile(SAVE_PATH+'slices_top_features.pickle'):
-        images_topology = Parallel(n_jobs=-1)(delayed(process_result_image)(dir_path[t], dir_path[t+1])
-                                              for t in range(len(dir_path) - 1))
+        images_topology = []
+        for i in range(0, len(dir_path), n_jump):
+            if i + n_jump + 1 < len(dir_path):
+                images_topology.append(process_result_image(dir_path[i:i+n_jump+1], n_jobs=-1))
+            else:
+                images_topology.append(process_result_image(dir_path[i:], n_jobs=-1))
+                break
+        # images_topology = Parallel(n_jobs=-1)(delayed(process_result_image)(dir_path[t], dir_path[t+1])
+        #                                       for t in range(len(dir_path) - 1))
 
-        images_topology = np.concatenate(images_topology)
+        images_topology = np.concatenate(images_topology, axis=1)
         write_pickle(path=SAVE_PATH + 'slices_top_features.pickle', array=images_topology)
 
     print('phase space')
@@ -138,5 +172,8 @@ if __name__ == "__main__":
                                           for t in range(len(dir_path) - 1))
         physical_qs = pd.concat(physical_qs)
         physical_qs.to_pickle(SAVE_PATH+'physical_features.pickle')
+
+    t_fin = time.time()
+    print(f'process run in {t_fin-t_in} s')
 
 

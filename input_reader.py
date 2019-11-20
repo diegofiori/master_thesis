@@ -19,7 +19,7 @@ class ImageReader(object):
     >>> print(image_reader.structure_)
     """
     def __init__(self, physical_q=None):
-        self.physical_q = ['theta', 'temperature', 'temperaturi', 'strmf', 'vpari', 'psi'
+        self.physical_q = ['theta', 'temperature', 'temperaturi', 'strmf', 'vpari'
                            ] if physical_q is None else physical_q
         self.structure_ = None
 
