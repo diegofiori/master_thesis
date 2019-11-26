@@ -115,8 +115,8 @@ class DiagramDerivative(BaseEstimator, TransformerResamplerMixin):
 
         if self.order is not None:
             Xt = np.linalg.norm(Xt, axis=2, ord=self.order)
-
-        return Xt.reshape((-1, 1))
+            Xt = Xt.reshape((-1, 1))
+        return Xt
 
     def resample(self, y, X=None):
         return y[1:]
@@ -127,7 +127,7 @@ class MultiDiagramsDerivative(BaseEstimator, TransformerResamplerMixin):
         self.n_jobs = n_jobs
         self.diagram_derivative = DiagramDerivative(*args, **kwargs)
 
-    def fit(self, X, y):
+    def fit(self, X, y=None):
         self.diagram_derivative.fit(X[0], y)
         self._is_fitted = True
         return self
@@ -137,8 +137,7 @@ class MultiDiagramsDerivative(BaseEstimator, TransformerResamplerMixin):
 
         check_is_fitted(self, ['_is_fitted'])
         X_t = Parallel(n_jobs=self.n_jobs)(delayed(self.diagram_derivative.transform)(X[i]) for i in range(len(X)))
-        X_t = np.concatenate([np.expand_dims(x, axis=0) for x in X_t])
-
+        X_t = np.concatenate(X_t)
         return X_t
 
     def resample(self, y, X=None):

@@ -217,6 +217,96 @@ class Grouper(BaseEstimator, TransformerResamplerMixin):
         return np.concatenate([np.expand_dims(y[i:i+self.period], axis=0) for i in range(0, len(y), self.period)])
 
 
+class Degrouper(BaseEstimator, TransformerResamplerMixin):
+    """ The inverse of the Data grouping transformer. It groups tha data in batch of length period.
+
+    Parameters
+    ----------
+    period: int, (default 2)
+
+    Examples
+    --------
+    >>> import numpy as np
+    >>> vector = np.arange(10,)
+    >>> grouper = Grouper(period=5)
+    >>> fake_y = np.zeros(len(vector))
+    >>> vector_grouped = grouper.fit_transform_resample(vector, fake_y)[0]
+    >>> degrouper = Degrouper()
+    >>> old_vector = degrouper.fit_transform(vector_grouped)
+    >>> assert vector == old_vector
+    """
+    def fit(self, X, y=None):
+        """Do nothing and return the estimator unchanged.
+
+        This method is there to implement the usual scikit-learn API and hence
+        work in pipelines.
+
+        Parameters
+        ----------
+        X : ndarray
+            Input data.
+
+        y : None
+            Ignored.
+
+        Returns
+        -------
+        self : object
+
+        """
+        self._is_fitted = True
+        return self
+
+    def transform(self, X, y=None):
+        """Transform/group X.
+        Note that the method gives an error if n_samples // period != 0
+
+        Parameters
+        ----------
+        X : array-like
+            Input data. ``
+
+        y : None
+            There is no need of a target, yet the pipeline API
+            requires this parameter.
+
+        Returns
+        -------
+        Xt : array-like,
+            The transformed/grouped input array. ``new_shape = (n_samples / period, period, *X.shape[1:])``.
+
+        """
+        check_is_fitted(self, ['_is_fitted'])
+        # Xt = check_array(X, ensure_2d=False)
+        Xt = X
+
+        return np.concatenate([Xt[i] for i in range(len(Xt))])
+
+    def resample(self, y, X=None):
+        """Resample y.
+
+        Parameters
+        ----------
+        y : ndarray, shape (n_samples, )
+            Target.
+
+        X : None
+            There is no need of input data,
+            yet the pipeline API requires this parameter.
+
+        Returns
+        -------
+        yt : ndarray, shape (n_samples_new, 1)
+            The resampled target. ``new_shape = (n_samples / period, period)``.
+
+        """
+        check_is_fitted(self, ['_is_fitted'])
+        # print(y.shape)
+        # y = column_or_1d(y)
+
+        return y.reshape((-1, ))
+
+
 class Resampler(BaseEstimator, TransformerResamplerMixin):
     """Data sampling transformer that returns a sampled numpy.ndarray. Note that tha sampling is done on the axis=1!!!
 
