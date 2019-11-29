@@ -35,6 +35,7 @@ DERIVATIVE_METRIC_LIST = [
     {'metric': 'wasserstein', 'metric_params': {'p': 2}}
 ]
 FIELDS = ['theta', 'temperature', 'temperaturi', 'strmf', 'vpari']
+GLOBAL_FIELDS = ['globtheta']
 
 
 def _recursive_search(h5_data, index):
@@ -125,17 +126,47 @@ def process_images_data(path, field_name, time_step_list, len_z):
     features = pipeline.fit_transform(data_loaded)
     return features
 
+def process_physics_data(path, field_name):
+    h5_data = h5py.File(path, 'r')
+    ph_q = _recursive_extraction(h5_data, field_name)
+    return ph_q
+
 
 if __name__ == '__main__':
     simulation_path = '/Users/diegofiori/Desktop/epfl/master_thesis/Reverse/'
+    save_path = '/Users/diegofiori/Desktop/epfl/master_thesis/results/'
     n_time_steps = 6
     n_jobs = -1
-    time_ids = get_all_time_ids(simulation_path)
-    features = Parallel(n_jobs=n_jobs)(delayed(process_images_data)(simulation_path, FIELDS[i],
-                                                                    time_ids[j:min(j+n_time_steps, len(time_ids))], 80)
-                                       for j in range(0, len(time_ids), n_time_steps)
-                                       for i in range(len(FIELDS)))
-    features = [np.array(features[i:i+len(FIELDS)]) for i in range(0, len(features)-len(FIELDS), len(FIELDS))]
-    features = np.concatenate(features, axis=1)
-    save_path = '/Users/diegofiori/Desktop/epfl/master_thesis/results/slices_top_features.pickle'
-    write_pickle(save_path, features)
+    time_ids = get_all_time_ids(simulation_path)[:10]
+    if not os.path.isfile(save_path + 'slices_top_features.pickle'):
+        features = Parallel(n_jobs=n_jobs)(delayed(process_images_data)(simulation_path, FIELDS[i],
+                                                                        time_ids[j:min(j+n_time_steps, len(time_ids))], 80)
+                                           for j in range(0, len(time_ids), n_time_steps)
+                                           for i in range(len(FIELDS)))
+        features = [np.array(features[i:i+len(FIELDS)]) for i in range(0, len(features)-len(FIELDS), len(FIELDS))]
+        features = np.concatenate(features, axis=1)
+        write_pickle(save_path+'slices_top_features.pickle', features)
+
+    if not os.path.isfile(save_path+'physical_features.pickle'):
+        file_names = [name for name in os.listdir(simulation_path) if ('result' in name)]
+        file_names = sorted(file_names, key=lambda x: int(x.split('.')[0].split('_')[-1]))
+        ph_features = Parallel(n_jobs=n_jobs)(delayed(process_physics_data(simulation_path+file_names[i]))
+                                              for i in range(len(file_names)))
+        ph_features = np.array(ph_features)
+        write_pickle(save_path+'physical_features.pickle', ph_features)
+    
+    # print('phase space')
+    # if not os.path.isfile(save_path+'phase_space_top_features.pickle'):
+    #     phase_space_top = Parallel(n_jobs=-1)(delayed(process_result_phase_space)(dir_path[t], dir_path[t+1])
+    #                                           for t in range(len(dir_path) - 1))
+    #
+    #     phase_space_top = np.concatenate(phase_space_top)
+    #
+    #     write_pickle(path=save_path+'phase_space_top_features.pickle', array=phase_space_top)
+    #
+    # print('extract physics')
+    # if not os.path.isfile(save_path+'physical_features.pickle'):
+    #     physical_qs = Parallel(n_jobs=-1)(delayed(process_result_physical_quantities)(dir_path[t])
+    #                                       for t in range(len(dir_path) - 1))
+    #     physical_qs = pd.concat(physical_qs)
+    #     physical_qs.to_pickle(save_path+'physical_features.pickle')
