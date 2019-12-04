@@ -4,6 +4,8 @@ import h5py
 import math
 import matplotlib.pyplot as plt
 
+# TODO: Remove this class after the visualization tool implementation!!!
+
 
 class Simulation:
     """ This class deals with the physics underlying the project. All the physical quantities needed and derived from
