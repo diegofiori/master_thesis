@@ -35,6 +35,7 @@ def process_physics_data(path, field_name):
 if __name__ == '__main__':
     with open("config.yml", 'r') as ymlfile:
         cfg = yaml.load(ymlfile)
+    print(cfg)
     simulation_path = cfg['data_path']['simulation_path']
     save_path = cfg['data_path']['save_path']
     n_time_steps = cfg['inputs']['n_time_steps']
