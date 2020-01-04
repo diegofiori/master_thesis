@@ -1,5 +1,5 @@
 import numpy as np
-from giotto.diagrams import Scaler, PersistenceEntropy, Amplitude
+from giotto.diagrams import PersistenceEntropy, Amplitude
 from giotto.homology import VietorisRipsPersistence, CubicalPersistence
 from giotto.pipeline import make_pipeline
 from sklearn.pipeline import make_union
@@ -8,6 +8,7 @@ from resampler import Grouper, Degrouper
 from diagram_derivatives import MultiDiagramsDerivative, DiagramDerivative
 from masker import Masker, Squeezer
 from resampler import Resampler
+from diagram_scaler import Scaler
 
 
 METRIC_LIST = [

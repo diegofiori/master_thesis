@@ -56,5 +56,15 @@ def plot_slice(image):
     plt.show()
 
 
+def moving_average(time_series, av_step):
+    new_time_series = np.zeros(time_series.shape)
+    for i in range(len(time_series)):
+        if i == 0 or av_step == 1:
+            new_time_series[i] = time_series[i]
+        else:
+            new_time_series[i] = np.mean(time_series[max(i-av_step, 0):i], axis=0)
+    return new_time_series
+
+
 
 
