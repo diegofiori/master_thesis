@@ -5,7 +5,7 @@ import numpy as np
 from input_reader import get_all_time_ids
 from run import process_images_data
 
-FIELDS = ['theta']
+FIELDS = ['strmf']
 
 if __name__=='__main__':
     with open("config.yml", 'r') as ymlfile:
