@@ -28,7 +28,7 @@ def _recursive_extraction(h5_data, index):
 
 
 def contains_id(file_name, id):
-    file_h5 = h5py.File(file_name, 'r')
+    file_h5 = h5py.File(file_name, 'r')['data']
     bool_flag = _recursive_search(file_h5, id) > 0
     return bool_flag
 
@@ -46,7 +46,7 @@ def read_simulation_file(path, field_name, time_step_list):
     list_of_wanted_files = sorted(list(set(list_of_wanted_files)), key=lambda x: int(x.split('.')[0].split('_')[-1]))
     data_list = []
     for wanted_file_name in list_of_wanted_files:
-        h5_file = h5py.File(path + wanted_file_name, 'r')['data']
+        h5_file = h5py.File(path + wanted_file_name, 'r')['data']['var3d']
         field_data = _recursive_extraction(h5_file, field_name)
         time_ids = list(set(time_step_list).intersection(set(field_data.keys())))
         data_list += [np.array(field_data[t_id][()]) for t_id in time_ids]

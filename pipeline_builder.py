@@ -2,10 +2,11 @@ import numpy as np
 from giotto.diagrams import PersistenceEntropy, Amplitude
 from giotto.homology import VietorisRipsPersistence, CubicalPersistence
 from giotto.pipeline import make_pipeline
-from sklearn.pipeline import make_union
+from sklearn.pipeline import FeatureUnion, make_union
 
 from resampler import Grouper, Degrouper
 from diagram_derivatives import MultiDiagramsDerivative, DiagramDerivative
+from giotto.diagrams import BettiCurve, HeatKernel, PersistenceLandscape
 from masker import Masker, Squeezer
 from resampler import Resampler
 from diagram_scaler import Scaler
@@ -33,23 +34,37 @@ DERIVATIVE_METRIC_LIST = [
     {'metric': 'wasserstein', 'metric_params': {'p': 2}}
 ]
 
+HEAT_LIST = [
+    {'sigma': 1.6, 'n_values': 50},
+    {'sigma': 3.2, 'n_values': 50}
+]
+
 
 def build_the_space_pipeline(space_period, n_jobs=None):
     cubical = CubicalPersistence(homology_dimensions=[0, 1])
     scaler = Scaler(metric='bottleneck')
     initial_pipeline_elements = [cubical,  scaler]
-    entropy_step = [initial_pipeline_elements + [PersistenceEntropy()]]
-    amplitude_steps = [initial_pipeline_elements+[Amplitude(**metric, order=None)] for metric in METRIC_LIST]
+    entropy_step = [initial_pipeline_elements + [PersistenceEntropy(), 'persistence_entropy']]
+    betti_step = [initial_pipeline_elements + [BettiCurve(n_values=50), Degrouper(dim=1), 'betti_curve']]
+    landscape_step = [initial_pipeline_elements + [PersistenceLandscape(n_layers=10, n_values=50), Degrouper(dim=1),
+                                                   Degrouper(dim=1), 'pers_landscape']]
+    heat_steps = [initial_pipeline_elements + [HeatKernel(**heat_dict), Degrouper(dim=1),
+                                               Degrouper(dim=1), f'heat_kernel_{heat_dict["sigma"]}']
+                  for heat_dict in HEAT_LIST]
+    amplitude_steps = [initial_pipeline_elements+[Amplitude(**metric, order=None),
+        f'amplitude_{metric["metric"]}_{"_".join(list(map(str, metric["metric_params"].values())))}']
+                       for metric in METRIC_LIST]
     amplitudes_entropy_steps = entropy_step + amplitude_steps
     # amplitudes_pipeline = make_union(*[make_pipeline(*steps) for steps in amplitudes_entropy_steps], n_jobs=n_jobs)
     # now we build the derivative pipeline
     grouper = Grouper(period=space_period)
     degrouper = Degrouper()
     derivative_steps = [initial_pipeline_elements +
-                        [grouper, MultiDiagramsDerivative(**metric, periodic=True, order=None), degrouper]
+                        [grouper, MultiDiagramsDerivative(**metric, periodic=True, order=None),
+        degrouper, f'derivative_{metric["metric"]}_{"_".join(list(map(str, metric["metric_params"].values())))}']
                         for metric in DERIVATIVE_METRIC_LIST]
-    all_steps = amplitudes_entropy_steps + derivative_steps
-    total_pipeline = make_union(*[make_pipeline(*steps) for steps in all_steps], n_jobs=n_jobs)
+    all_steps = amplitudes_entropy_steps + derivative_steps + heat_steps + betti_step + landscape_step
+    total_pipeline = FeatureUnion([(steps[-1], make_pipeline(*steps[:-1])) for steps in all_steps], n_jobs=n_jobs)
 
     return total_pipeline
 

@@ -235,6 +235,9 @@ class Degrouper(BaseEstimator, TransformerResamplerMixin):
     >>> old_vector = degrouper.fit_transform(vector_grouped)
     >>> assert vector == old_vector
     """
+    def __init__(self, dim=0):
+        self.dim = dim
+
     def fit(self, X, y=None):
         """Do nothing and return the estimator unchanged.
 
@@ -279,8 +282,14 @@ class Degrouper(BaseEstimator, TransformerResamplerMixin):
         check_is_fitted(self, ['_is_fitted'])
         # Xt = check_array(X, ensure_2d=False)
         Xt = X
+        if self.dim == 0:
+            Xt = np.concatenate([Xt[i] for i in range(len(Xt))])
+        elif self.dim == 1:
+            Xt = np.concatenate([Xt[:, i] for i in range(Xt.shape[1])], axis=1)
+        else:
+            raise ValueError(f'The degrouper does not support dimension higher than 1. Got {self.dim}.')
 
-        return np.concatenate([Xt[i] for i in range(len(Xt))])
+        return Xt
 
     def resample(self, y, X=None):
         """Resample y.
