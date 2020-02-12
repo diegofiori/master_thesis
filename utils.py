@@ -66,5 +66,19 @@ def moving_average(time_series, av_step):
     return new_time_series
 
 
+class SemInterval:
+    def __init__(self, a, b):
+        self.a = a
+        self.b = b
+
+    def contains(self, c):
+        return c < self.b and c >= self.a
+
+    def __str__(self):
+        return f"I[{self.a}, {self.b})"
+
+    def __repr__(self):
+        return f"I[{self.a}, {self.b})"
+
 
 

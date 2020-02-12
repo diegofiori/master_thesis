@@ -144,6 +144,11 @@ class MultiDiagramsDerivative(BaseEstimator, TransformerResamplerMixin):
         check_is_fitted(self, ['_is_fitted'])
         return y
 
+    def get_params(self, deep=True):
+        out = self.diagram_derivative.get_params(deep)
+        out['n_jobs'] = self.n_jobs
+        return out
+
 
 
 

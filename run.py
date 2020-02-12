@@ -11,11 +11,15 @@ import os
 
 FIELDS = ['theta', 'temperature', 'temperaturi', 'strmf', 'vpari']
 GLOBAL_FIELDS = ['globtheta']
+NEED_EXP = ['theta', 'temperature', 'temperaturi']
 
 
-def process_images_data(path, field_name, time_step_list, len_z):
+def process_images_data(path, field_name, time_step_list, len_z, comp_rem=0):
     data_loaded = read_simulation_file(path, field_name, time_step_list)
-    pipeline = build_the_space_pipeline(space_period=len_z)
+    pipeline = build_the_space_pipeline(space_period=len_z,
+                                        remove_n_comp=comp_rem)
+    if field_name in NEED_EXP:
+        data_loaded = np.exp(data_loaded)
     features = pipeline.fit_transform(data_loaded)
     return features
 
@@ -41,11 +45,12 @@ if __name__ == '__main__':
     n_time_steps = cfg['inputs']['n_time_steps']
     n_jobs = cfg['inputs']['n_jobs']
     resample_period = cfg['inputs']['resample_period']
-    time_ids = get_all_time_ids(simulation_path)[:10]
+    comp_rem = cfg['inputs']['nb_components_to_remove']
+    time_ids = get_all_time_ids(simulation_path)[-100:]
     if not os.path.isfile(save_path + 'slices_top_features.pickle'):
         features = Parallel(n_jobs=n_jobs)(delayed(process_images_data)(simulation_path, FIELDS[i],
                                                                         time_ids[j:min(j+n_time_steps, len(time_ids))],
-                                                                        80)
+                                                                        80, comp_rem)
                                            for j in range(0, len(time_ids), n_time_steps)
                                            for i in range(len(FIELDS)))
         features = [np.array(features[i:i+len(FIELDS)]) for i in range(0, len(features)-len(FIELDS), len(FIELDS))]

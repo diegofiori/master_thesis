@@ -4,11 +4,13 @@ from giotto.homology import VietorisRipsPersistence, CubicalPersistence
 from giotto.pipeline import make_pipeline
 from sklearn.pipeline import FeatureUnion, make_union
 
+from filter import FilterBigComponents
 from resampler import Grouper, Degrouper
 from diagram_derivatives import MultiDiagramsDerivative, DiagramDerivative
 from giotto.diagrams import BettiCurve, HeatKernel, PersistenceLandscape
 from masker import Masker, Squeezer
 from resampler import Resampler
+from utils import SemInterval
 from diagram_scaler import Scaler
 
 
@@ -40,10 +42,11 @@ HEAT_LIST = [
 ]
 
 
-def build_the_space_pipeline(space_period, n_jobs=None):
+def build_the_space_pipeline(space_period, remove_n_comp=0, n_jobs=None):
     cubical = CubicalPersistence(homology_dimensions=[0, 1])
     scaler = Scaler(metric='bottleneck')
-    initial_pipeline_elements = [cubical,  scaler]
+    filter_bc = FilterBigComponents(n_filter=remove_n_comp)
+    initial_pipeline_elements = [cubical,  scaler, filter_bc]
     entropy_step = [initial_pipeline_elements + [PersistenceEntropy(), 'persistence_entropy']]
     betti_step = [initial_pipeline_elements + [BettiCurve(n_values=50), Degrouper(dim=1), 'betti_curve']]
     landscape_step = [initial_pipeline_elements + [PersistenceLandscape(n_layers=10, n_values=50), Degrouper(dim=1),
@@ -86,3 +89,25 @@ def build_phase_space_pipeline(resemple_period=1, n_jobs=None):
     return total_pipeline
 
 
+def get_pipeline_index():
+    dict_transf = {}
+    index = 0
+    pipeline = build_the_space_pipeline(80)
+    list_transf = [x[0] for x in pipeline.transformer_list]
+    for transf in list_transf:
+        if transf.split('_')[0] in ['amplitude', 'derivative', 'persistence']:
+            dict_transf[transf] = SemInterval(index, index + 2)
+            index += 2
+        elif transf.split('_')[0] == 'betti':
+            dict_transf[transf] = SemInterval(index, index + 100)
+            index += 100
+        elif transf.split('_')[0] == 'heat':
+            dict_transf[transf] = SemInterval(index, index + 2 * 50 * 50)
+            index += 50 * 50 * 2
+        elif transf.split('_')[0] == 'pers':
+            dict_transf[transf] = SemInterval(index, index + 2 * 10 * 50)
+            index += 2 * 10 * 50
+        else:
+            raise KeyError(f'The key {transf} is not supported')
+
+    return dict_transf
