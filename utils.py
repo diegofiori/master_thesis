@@ -1,9 +1,9 @@
 import pickle as pkl
 import numpy as np
 
-from giotto.diagrams import Scaler
-from giotto.homology import CubicalPersistence
-from giotto.pipeline import Pipeline
+from gtda.diagrams import Scaler
+from gtda.homology import CubicalPersistence
+from gtda.pipeline import Pipeline
 
 import matplotlib.pyplot as plt
 

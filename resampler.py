@@ -1,7 +1,7 @@
-from giotto.utils import validate_params
+from gtda.utils import validate_params
 from sklearn.utils.validation import check_array, check_is_fitted, column_or_1d
 from sklearn.base import BaseEstimator
-from giotto.base import TransformerResamplerMixin
+from gtda.base import TransformerResamplerMixin
 
 import numpy as np
 
@@ -23,7 +23,7 @@ class ShiftResampler(BaseEstimator, TransformerResamplerMixin):
     >>> import pandas as pd
     >>> import numpy as np
     >>> import matplotlib.pyplot as plt
-    >>> from giotto.time_series import Resampler
+    >>> from gtda.time_series import Resampler
     >>> # Create a noisy signal sampled
     >>> signal = np.asarray([np.sin(x /40) + np.random.random()
     ... for x in range(0, 300)])

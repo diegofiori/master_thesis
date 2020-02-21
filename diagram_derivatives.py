@@ -1,11 +1,11 @@
 import numpy as np
-from giotto.diagrams import Amplitude, PairwiseDistance
-from giotto.homology import CubicalPersistence
-from giotto.homology import VietorisRipsPersistence
-from giotto.diagrams._metrics import *
-from giotto.utils.validation import check_diagram, validate_params, validate_metric_params
-from giotto.base import TransformerResamplerMixin
-from giotto.diagrams._utils import _discretize, _subdiagrams
+from gtda.diagrams import Amplitude, PairwiseDistance
+from gtda.homology import CubicalPersistence
+from gtda.homology import VietorisRipsPersistence
+from gtda.diagrams._metrics import *
+from gtda.utils.validation import check_diagram, validate_params, validate_metric_params
+from gtda.base import TransformerResamplerMixin
+from gtda.diagrams._utils import _discretize, _subdiagrams
 from joblib.parallel import Parallel, delayed
 
 from sklearn.base import BaseEstimator

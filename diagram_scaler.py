@@ -1,8 +1,8 @@
 import types
 import numpy as np
-from giotto.diagrams._metrics import _parallel_amplitude
-from giotto.diagrams._utils import _discretize
-from giotto.utils import validate_params, validate_metric_params, check_diagram
+from gtda.diagrams._metrics import _parallel_amplitude
+from gtda.diagrams._utils import _discretize
+from gtda.utils import validate_params, validate_metric_params, check_diagram
 
 from sklearn.base import BaseEstimator, TransformerMixin
 from sklearn.utils.validation import check_is_fitted

@@ -1,4 +1,4 @@
-from giotto.base import TransformerResamplerMixin
+from gtda.base import TransformerResamplerMixin
 from sklearn.base import BaseEstimator
 from sklearn.utils.validation import check_is_fitted, column_or_1d
 import numpy as np

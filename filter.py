@@ -1,6 +1,6 @@
 import numpy as np
 from sklearn.base import BaseEstimator, TransformerMixin
-from giotto.utils.validation import validate_params, check_diagram
+from gtda.utils.validation import validate_params, check_diagram
 from sklearn.utils.validation import check_is_fitted
 
 

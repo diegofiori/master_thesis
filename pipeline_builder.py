@@ -1,7 +1,7 @@
 import numpy as np
-from giotto.diagrams import PersistenceEntropy, Amplitude
-from giotto.homology import VietorisRipsPersistence, CubicalPersistence
-from giotto.pipeline import make_pipeline
+from gtda.diagrams import PersistenceEntropy, Amplitude
+from gtda.homology import VietorisRipsPersistence, CubicalPersistence
+from gtda.pipeline import make_pipeline
 from sklearn.pipeline import FeatureUnion, make_union
 
 from filter import FilterBigComponents
