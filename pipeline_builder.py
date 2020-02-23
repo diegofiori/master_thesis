@@ -18,16 +18,16 @@ METRIC_LIST = [
     {'metric': 'bottleneck', 'metric_params': {}},
     {'metric': 'wasserstein', 'metric_params': {'p': 1}},
     {'metric': 'wasserstein', 'metric_params': {'p': 2}},
-    {'metric': 'landscape', 'metric_params': {'p': 1, 'n_layers': 1, 'n_values': 100}},
-    {'metric': 'landscape', 'metric_params': {'p': 1, 'n_layers': 2, 'n_values': 100}},
-    {'metric': 'landscape', 'metric_params': {'p': 2, 'n_layers': 1, 'n_values': 100}},
-    {'metric': 'landscape', 'metric_params': {'p': 2, 'n_layers': 2, 'n_values': 100}},
-    {'metric': 'betti', 'metric_params': {'p': 1, 'n_values': 100}},
-    {'metric': 'betti', 'metric_params': {'p': 2, 'n_values': 100}},
-    {'metric': 'heat', 'metric_params': {'p': 1, 'sigma': 1.6, 'n_values': 100}},
-    {'metric': 'heat', 'metric_params': {'p': 1, 'sigma': 3.2, 'n_values': 100}},
-    {'metric': 'heat', 'metric_params': {'p': 2, 'sigma': 1.6, 'n_values': 100}},
-    {'metric': 'heat', 'metric_params': {'p': 2, 'sigma': 3.2, 'n_values': 100}}
+    {'metric': 'landscape', 'metric_params': {'p': 1, 'n_layers': 1, 'n_bins': 100}},
+    {'metric': 'landscape', 'metric_params': {'p': 1, 'n_layers': 2, 'n_bins': 100}},
+    {'metric': 'landscape', 'metric_params': {'p': 2, 'n_layers': 1, 'n_bins': 100}},
+    {'metric': 'landscape', 'metric_params': {'p': 2, 'n_layers': 2, 'n_bins': 100}},
+    {'metric': 'betti', 'metric_params': {'p': 1, 'n_bins': 100}},
+    {'metric': 'betti', 'metric_params': {'p': 2, 'n_bins': 100}},
+    {'metric': 'heat', 'metric_params': {'p': 1, 'sigma': 1.6, 'n_bins': 100}},
+    {'metric': 'heat', 'metric_params': {'p': 1, 'sigma': 3.2, 'n_bins': 100}},
+    {'metric': 'heat', 'metric_params': {'p': 2, 'sigma': 1.6, 'n_bins': 100}},
+    {'metric': 'heat', 'metric_params': {'p': 2, 'sigma': 3.2, 'n_bins': 100}}
 ]
 
 DERIVATIVE_METRIC_LIST = [
