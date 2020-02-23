@@ -15,7 +15,7 @@ from gtda.diagrams import Scaler
 
 
 METRIC_LIST = [
-    {'metric': 'bottleneck', 'metric_params': {'p': np.inf}},
+    {'metric': 'bottleneck', 'metric_params': {}},
     {'metric': 'wasserstein', 'metric_params': {'p': 1}},
     {'metric': 'wasserstein', 'metric_params': {'p': 2}},
     {'metric': 'landscape', 'metric_params': {'p': 1, 'n_layers': 1, 'n_values': 100}},
@@ -31,7 +31,7 @@ METRIC_LIST = [
 ]
 
 DERIVATIVE_METRIC_LIST = [
-    {'metric': 'bottleneck', 'metric_params': {'p': np.inf}},
+    {'metric': 'bottleneck', 'metric_params': {}},
     {'metric': 'wasserstein', 'metric_params': {'p': 1}},
     {'metric': 'wasserstein', 'metric_params': {'p': 2}}
 ]
