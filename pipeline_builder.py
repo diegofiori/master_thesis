@@ -7,11 +7,11 @@ from sklearn.pipeline import FeatureUnion, make_union
 from filter import FilterBigComponents
 from resampler import Grouper, Degrouper
 from diagram_derivatives import MultiDiagramsDerivative, DiagramDerivative
-from giotto.diagrams import BettiCurve, HeatKernel, PersistenceLandscape
+from gtda.diagrams import BettiCurve, HeatKernel, PersistenceLandscape
 from masker import Masker, Squeezer
 from resampler import Resampler
 from utils import SemInterval
-from diagram_scaler import Scaler
+from gtda.diagrams import Scaler
 
 
 METRIC_LIST = [
@@ -37,8 +37,8 @@ DERIVATIVE_METRIC_LIST = [
 ]
 
 HEAT_LIST = [
-    {'sigma': 1.6, 'n_values': 50},
-    {'sigma': 3.2, 'n_values': 50}
+    {'sigma': 1.6, 'n_bins': 50},
+    {'sigma': 3.2, 'n_bins': 50}
 ]
 
 
@@ -48,8 +48,8 @@ def build_the_space_pipeline(space_period, remove_n_comp=0, n_jobs=None):
     filter_bc = FilterBigComponents(n_filter=remove_n_comp)
     initial_pipeline_elements = [cubical,  scaler, filter_bc]
     entropy_step = [initial_pipeline_elements + [PersistenceEntropy(), 'persistence_entropy']]
-    betti_step = [initial_pipeline_elements + [BettiCurve(n_values=50), Degrouper(dim=1), 'betti_curve']]
-    landscape_step = [initial_pipeline_elements + [PersistenceLandscape(n_layers=10, n_values=50), Degrouper(dim=1),
+    betti_step = [initial_pipeline_elements + [BettiCurve(n_bins=50), Degrouper(dim=1), 'betti_curve']]
+    landscape_step = [initial_pipeline_elements + [PersistenceLandscape(n_layers=10, n_bins=50), Degrouper(dim=1),
                                                    Degrouper(dim=1), 'pers_landscape']]
     heat_steps = [initial_pipeline_elements + [HeatKernel(**heat_dict), Degrouper(dim=1),
                                                Degrouper(dim=1), f'heat_kernel_{heat_dict["sigma"]}']

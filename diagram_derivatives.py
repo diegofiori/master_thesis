@@ -5,7 +5,7 @@ from gtda.homology import VietorisRipsPersistence
 from gtda.diagrams._metrics import *
 from gtda.utils.validation import check_diagram, validate_params, validate_metric_params
 from gtda.base import TransformerResamplerMixin
-from gtda.diagrams._utils import _discretize, _subdiagrams
+from gtda.diagrams._utils import _bin, _subdiagrams
 from joblib.parallel import Parallel, delayed
 
 from sklearn.base import BaseEstimator
@@ -96,7 +96,7 @@ class DiagramDerivative(BaseEstimator, TransformerResamplerMixin):
         if self.metric in ['landscape', 'heat', 'betti']:
             self.effective_metric_params_['samplings'], \
             self.effective_metric_params_['step_sizes'] = \
-                _discretize(X, **self.effective_metric_params_)
+                _bin(X, **self.effective_metric_params_)
 
         self._X = X
         return self
